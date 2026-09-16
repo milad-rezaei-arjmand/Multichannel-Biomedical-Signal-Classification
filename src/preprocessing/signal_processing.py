@@ -290,7 +290,50 @@ def preprocess_dataset(
                 filter_order
             )
         )
+def preprocess_dataset(
+    signals,
+    fs=DEFAULT_FS,
+    low_freq=5.0,
+    high_freq=3500.0,
+    filter_order=4
+):
+    """
+    Preprocess complete dataset.
 
+    Expected input:
+
+    (samples, time_points, channels)
+    """
+
+    signals = np.asarray(
+        signals,
+        dtype=np.float32
+    )
+
+    if signals.ndim != 3:
+        raise ValueError(
+            "Dataset must have shape "
+            "(samples, time_points, channels)"
+        )
+
+    processed = []
+
+    for sample in signals:
+
+        processed.append(
+            preprocess_multichannel_signal(
+                sample,
+                fs,
+                low_freq,
+                high_freq,
+                filter_order
+            )
+        )
+
+    return np.asarray(
+        processed,
+        dtype=np.float32
+    )
 
     return np.asarray(
         processed,
