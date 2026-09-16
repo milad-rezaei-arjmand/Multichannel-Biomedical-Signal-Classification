@@ -27,9 +27,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
 
 
-from src.data_loader import (
-    load_dataset
-)
+from src.data_loader import load_dataset
 
 
 from src.preprocessing.signal_processing import (
@@ -70,6 +68,7 @@ def select_features(
     """
     Feature selection using ANOVA F-test.
     """
+
 
     selector = SelectKBest(
         score_func=f_classif,
@@ -112,14 +111,29 @@ def run_training(
     # Load dataset
     # -----------------------
 
+    print("Loading dataset...")
+
+
     signals, labels = load_dataset(
         dataset_path
     )
 
 
+    print(
+        "Raw signal shape:",
+        signals.shape
+    )
+
+
+
     # -----------------------
     # Signal preprocessing
     # -----------------------
+
+    print(
+        "Preprocessing signals..."
+    )
+
 
     signals = preprocess_multichannel_signal(
         signals,
@@ -127,9 +141,15 @@ def run_training(
     )
 
 
+
     # -----------------------
     # Feature extraction
     # -----------------------
+
+    print(
+        "Extracting features..."
+    )
+
 
     X_features, feature_names = (
         build_dataset_features(
@@ -139,9 +159,16 @@ def run_training(
     )
 
 
+    print(
+        "Feature matrix:",
+        X_features.shape
+    )
+
+
     y = np.asarray(
         labels
     )
+
 
 
     # -----------------------
@@ -157,6 +184,7 @@ def run_training(
     )
 
 
+
     # -----------------------
     # Validation split
     # -----------------------
@@ -170,9 +198,15 @@ def run_training(
     )
 
 
+
     # -----------------------
     # Feature selection
     # -----------------------
+
+    print(
+        "Selecting features..."
+    )
+
 
     X_train, X_test, selector = (
         select_features(
@@ -188,9 +222,21 @@ def run_training(
     )
 
 
+    print(
+        "Selected feature count:",
+        X_train.shape[1]
+    )
+
+
+
     # -----------------------
     # Model training
     # -----------------------
+
+    print(
+        "Training CatBoost ensemble..."
+    )
+
 
     models = train_ensemble(
         X_train,
@@ -200,9 +246,15 @@ def run_training(
     )
 
 
+
     # -----------------------
     # Prediction
     # -----------------------
+
+    print(
+        "Predicting..."
+    )
+
 
     predictions = predict_ensemble(
         models,
@@ -210,9 +262,15 @@ def run_training(
     )
 
 
+
     # -----------------------
     # Evaluation
     # -----------------------
+
+    print(
+        "Evaluating..."
+    )
+
 
     results = evaluate_model(
         y_test,
@@ -234,16 +292,27 @@ if __name__ == "__main__":
 
 
     DATASET_PATH = (
-        "data/dataset.csv"
+        "data/sample_dataset.csv"
     )
 
+
     CLASS_NAMES = [
-         "N",
-         "MVP",
-         "MS",
-         "MR",
-         "AS"
+        "N",
+        "MVP",
+        "MS",
+        "MR",
+        "AS"
     ]
+
+
+
+    if not Path(DATASET_PATH).exists():
+
+        raise FileNotFoundError(
+            f"Dataset not found: {DATASET_PATH}"
+        )
+
+
 
     results = run_training(
         DATASET_PATH,
@@ -251,8 +320,9 @@ if __name__ == "__main__":
     )
 
 
+
     print(
-        "Training completed."
+        "\nTraining completed."
     )
 
 
