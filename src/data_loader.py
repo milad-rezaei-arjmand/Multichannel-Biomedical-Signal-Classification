@@ -1,6 +1,10 @@
 """
 Dataset loading utilities for
 Multichannel Biomedical Signal Classification.
+
+Supported formats:
+- NPZ (recommended)
+- CSV (basic support)
 """
 
 from pathlib import Path
@@ -10,25 +14,79 @@ import pandas as pd
 
 
 
-def load_csv_dataset(
-    file_path
-):
+def load_npz_dataset(file_path):
     """
     Load biomedical signal dataset
-    from CSV file.
+    from NPZ format.
 
-    Parameters
-    ----------
-    file_path : str or Path
-        Dataset path.
+    Expected structure:
 
-    Returns
-    -------
-    signals : numpy.ndarray
-        Signal samples.
+    signals:
+        (samples, time_points, channels)
 
-    labels : numpy.ndarray
-        Class labels.
+    labels:
+        (samples,)
+    """
+
+    data = np.load(
+        file_path,
+        allow_pickle=True
+    )
+
+
+    if "signals" not in data or "labels" not in data:
+
+        raise ValueError(
+            "NPZ file must contain 'signals' and 'labels'."
+        )
+
+
+    signals = data["signals"]
+
+    labels = data["labels"]
+
+
+    signals = np.asarray(
+        signals,
+        dtype=np.float32
+    )
+
+
+    labels = np.asarray(
+        labels
+    )
+
+
+    if signals.ndim != 3:
+
+        raise ValueError(
+            "Signals must have shape "
+            "(samples, time_points, channels)."
+        )
+
+
+    if len(signals) != len(labels):
+
+        raise ValueError(
+            "Number of signals and labels must match."
+        )
+
+
+    return signals, labels
+
+
+
+def load_csv_dataset(file_path):
+    """
+    Load dataset from CSV format.
+
+    Expected columns:
+
+    Amplitude
+    Velocity
+    Acceleration
+    Alpha
+    label
     """
 
     data = pd.read_csv(
@@ -37,8 +95,9 @@ def load_csv_dataset(
 
 
     if "label" not in data.columns:
+
         raise ValueError(
-            "Dataset must contain a 'label' column."
+            "CSV dataset must contain 'label' column."
         )
 
 
@@ -59,11 +118,43 @@ def load_csv_dataset(
 
 
 
+def validate_dataset(
+    signals,
+    labels
+):
+    """
+    Validate loaded dataset.
+    """
+
+    if len(signals) != len(labels):
+
+        raise ValueError(
+            "Signals and labels size mismatch."
+        )
+
+
+    print(
+        "Signals shape:",
+        signals.shape
+    )
+
+    print(
+        "Labels shape:",
+        labels.shape
+    )
+
+
+
 def load_dataset(
     data_path
 ):
     """
     General dataset loader.
+
+    Supports:
+
+    .npz
+    .csv
     """
 
     path = Path(
@@ -72,18 +163,38 @@ def load_dataset(
 
 
     if not path.exists():
+
         raise FileNotFoundError(
             f"Dataset file not found: {path}"
         )
 
 
-    if path.suffix.lower() == ".csv":
+    if path.suffix.lower() == ".npz":
 
-        return load_csv_dataset(
+        signals, labels = load_npz_dataset(
             path
         )
 
 
-    raise ValueError(
-        "Unsupported dataset format. Only CSV files are supported."
+    elif path.suffix.lower() == ".csv":
+
+        signals, labels = load_csv_dataset(
+            path
+        )
+
+
+    else:
+
+        raise ValueError(
+            "Unsupported dataset format. "
+            "Use .npz or .csv"
+        )
+
+
+    validate_dataset(
+        signals,
+        labels
     )
+
+
+    return signals, labels
