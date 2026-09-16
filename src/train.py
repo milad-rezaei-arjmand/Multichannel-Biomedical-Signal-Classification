@@ -237,13 +237,13 @@ if __name__ == "__main__":
         "data/dataset.csv"
     )
 
-
     CLASS_NAMES = [
-        "Class_0",
-        "Class_1",
-        "Class_2"
+         "N",
+         "MVP",
+         "MS",
+         "MR",
+         "AS"
     ]
-
 
     results = run_training(
         DATASET_PATH,
