@@ -39,3 +39,5 @@ Thumbs.db
 .idea/
 # CatBoost logs
 catboost_info/
+# Local test datasets
+data/*.npz

@@ -1,89 +1,221 @@
 # Dataset
 
-This directory contains the dataset used for the Multichannel Biomedical Signal Classification project.
+## Overview
 
-## Dataset Overview
+The original biomedical signal dataset is not included in this
+repository due to data usage restrictions and privacy considerations.
 
-The dataset consists of multichannel biomedical signal recordings designed for supervised classification tasks.
+This repository provides the complete machine learning pipeline,
+including:
 
-The dataset includes:
+-   Signal preprocessing
+-   Multi-domain feature extraction
+-   Feature selection
+-   CatBoost ensemble classification
+-   Model evaluation
 
-- Multichannel signal recordings
-- Corresponding class labels
-- Signal samples prepared for feature extraction and machine learning classification
+Users can apply the pipeline by providing their own compatible
+multichannel biomedical signal dataset.
 
-Due to dataset availability, privacy considerations, and file size limitations, raw data files are not included in this repository.
+------------------------------------------------------------------------
 
----
+## Dataset Structure
 
-## Data Format
+The framework is designed for multichannel biomedical signals.
 
-The expected input format is:
+Expected input format:
 
-```text
-channel_1
-channel_2
-channel_3
-channel_4
-label
-```
-
-Each sample should contain:
-
-```text
-channel_1, channel_2, channel_3, channel_4, label
+``` text
+(samples, time_points, channels)
 ```
 
 Example:
 
-```text
-channel_1,channel_2,channel_3,channel_4,label
-0.12,0.45,0.31,0.22,Class_A
-0.21,0.33,0.51,0.18,Class_B
+``` text
+(1000, 20000, 4)
 ```
 
----
+where:
 
-## Dataset Loading
+-   `samples` = number of signal samples
+-   `time_points` = number of temporal points per signal
+-   `channels` = number of synchronized signal channels
 
-The dataset is loaded using:
+------------------------------------------------------------------------
 
-```text
-src/data_loader.py
+## Signal Channels
+
+The model expects four input channels:
+
+  Channel     Description
+  ----------- --------------
+  Channel 1   Amplitude
+  Channel 2   Velocity
+  Channel 3   Acceleration
+  Channel 4   Alpha
+
+------------------------------------------------------------------------
+
+## Labels
+
+The classification task contains five target classes:
+
+  Label   Description
+  ------- -----------------------
+  N       Normal
+  MVP     Mitral Valve Prolapse
+  MS      Mitral Stenosis
+  MR      Mitral Regurgitation
+  AS      Aortic Stenosis
+
+The label array format:
+
+``` text
+(samples,)
 ```
-
-The loader provides:
-
-- Dataset reading
-- Signal extraction
-- Label separation
-
----
-
-## Usage
-
-To use your own dataset:
-
-1. Place the dataset file inside this directory.
 
 Example:
 
-```text
-data/dataset.csv
+``` text
+[
+N,
+MVP,
+MS,
+MR,
+AS
+]
 ```
 
-2. Update the dataset path in:
+------------------------------------------------------------------------
 
-```text
+## Dataset Preparation
+
+Place your dataset inside:
+
+``` text
+data/
+```
+
+Example:
+
+``` text
+data/
+├── dataset.csv
+└── README.md
+```
+
+Update the dataset path in:
+
+``` text
 src/train.py
 ```
 
-3. Run the training pipeline.
+Example:
 
----
+``` python
+DATASET_PATH = "data/dataset.csv"
+```
 
-## Data Privacy
+------------------------------------------------------------------------
 
-This repository does not distribute raw biomedical recordings.
+## CSV Input Format
 
-Users should provide their own legally available dataset before running experiments.
+For CSV-based datasets, the expected columns are:
+
+``` text
+Amplitude,Velocity,Acceleration,Alpha,label
+```
+
+Example:
+
+``` text
+Amplitude,Velocity,Acceleration,Alpha,label
+0.12,0.31,0.21,0.45,N
+0.15,0.28,0.19,0.41,MVP
+0.10,0.35,0.25,0.50,MS
+```
+
+------------------------------------------------------------------------
+
+## Recommended Data Format
+
+For large biomedical signal datasets, a structured NumPy format is
+recommended:
+
+``` text
+dataset.npz
+```
+
+containing:
+
+``` python
+signals
+labels
+```
+
+Expected shapes:
+
+``` text
+signals.shape = (samples, time_points, channels)
+
+labels.shape = (samples,)
+```
+
+Example:
+
+``` text
+signals.shape
+
+(1000, 20000, 4)
+
+
+labels.shape
+
+(1000,)
+```
+
+------------------------------------------------------------------------
+
+## Training Pipeline
+
+After preparing the dataset:
+
+``` bash
+python3 src/train.py
+```
+
+The pipeline performs:
+
+``` text
+Multichannel Biomedical Signal
+
+        ↓
+
+Signal Preprocessing
+
+        ↓
+
+Feature Extraction
+
+        ↓
+
+Feature Selection
+
+        ↓
+
+CatBoost Ensemble Classification
+
+        ↓
+
+Performance Evaluation
+```
+
+------------------------------------------------------------------------
+
+## Dataset Availability
+
+The complete dataset used for experiments is not distributed with this
+repository.
+
+Users should provide their own dataset following the required structure
+before running experiments.
