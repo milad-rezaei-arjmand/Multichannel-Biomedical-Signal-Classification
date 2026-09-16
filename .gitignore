@@ -1,0 +1,41 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dataset files
+data/*
+!data/README.md
+
+# Trained models
+*.cbm
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+
+# Experiment outputs
+results/*
+!results/README.md
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+# CatBoost logs
+catboost_info/
