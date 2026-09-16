@@ -26,6 +26,7 @@ data/*
 # Experiment outputs
 results/*
 !results/README.md
+!results/final_metrics.md
 
 # Logs
 *.log
