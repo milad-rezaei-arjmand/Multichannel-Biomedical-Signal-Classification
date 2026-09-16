@@ -8,14 +8,17 @@ Pipeline:
 3. Extract features
 4. Feature selection
 5. Train CatBoost ensemble
-6. Evaluate model
+6. Save models
+7. Evaluate model
 """
 
 
 from pathlib import Path
 import sys
-
+import argparse
+import pickle
 import numpy as np
+
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest, f_classif
@@ -24,10 +27,23 @@ from sklearn.feature_selection import SelectKBest, f_classif
 # Add project root to Python path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(ROOT_DIR))
+
+sys.path.append(
+    str(ROOT_DIR)
+)
 
 
-from src.data_loader import load_dataset
+
+from src.config import (
+    DEFAULT_FS,
+    CLASS_NAMES,
+    RANDOM_STATE
+)
+
+
+from src.data_loader import (
+    load_dataset
+)
 
 
 from src.preprocessing.signal_processing import (
@@ -42,7 +58,8 @@ from src.feature_extraction.build_features import (
 
 from src.models.catboost_classifier import (
     train_ensemble,
-    predict_ensemble
+    predict_ensemble,
+    save_models
 )
 
 
@@ -52,10 +69,6 @@ from src.evaluation.metrics import (
 )
 
 
-
-RANDOM_STATE = 42
-
-DEFAULT_FS = 8000
 
 
 
@@ -98,20 +111,46 @@ def select_features(
 
 
 
+
+
 def run_training(
     dataset_path,
-    class_names
+    class_names,
+    output_dir="results"
 ):
     """
     Complete training pipeline.
     """
 
 
+    output_dir = Path(
+        output_dir
+    )
+
+
+    checkpoint_dir = Path(
+        "checkpoints"
+    )
+
+
+    output_dir.mkdir(
+        exist_ok=True
+    )
+
+
+    checkpoint_dir.mkdir(
+        exist_ok=True
+    )
+
+
+
     # -----------------------
     # Load dataset
     # -----------------------
 
-    print("Loading dataset...")
+    print(
+        "Loading dataset..."
+    )
 
 
     signals, labels = load_dataset(
@@ -127,7 +166,7 @@ def run_training(
 
 
     # -----------------------
-    # Signal preprocessing
+    # Preprocessing
     # -----------------------
 
     print(
@@ -139,7 +178,7 @@ def run_training(
         signals,
         fs=DEFAULT_FS
     )
-    
+
 
 
     # -----------------------
@@ -229,8 +268,20 @@ def run_training(
 
 
 
+    with open(
+        checkpoint_dir / "feature_selector.pkl",
+        "wb"
+    ) as f:
+
+        pickle.dump(
+            selector,
+            f
+        )
+
+
+
     # -----------------------
-    # Model training
+    # Training
     # -----------------------
 
     print(
@@ -243,6 +294,12 @@ def run_training(
         y_train,
         X_val,
         y_val
+    )
+
+
+    save_models(
+        models,
+        checkpoint_dir
     )
 
 
@@ -280,7 +337,8 @@ def run_training(
 
 
     save_evaluation_results(
-        results
+        results,
+        output_dir
     )
 
 
@@ -288,35 +346,43 @@ def run_training(
 
 
 
+
+
 if __name__ == "__main__":
 
 
-    DATASET_PATH = (
-         "data/test_dataset.npz"
+    parser = argparse.ArgumentParser(
+        description=
+        "Multichannel Biomedical Signal Classification"
     )
 
 
-    CLASS_NAMES = [
-        "N",
-        "MVP",
-        "MS",
-        "MR",
-        "AS"
-    ]
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True,
+        help=
+        "Path to dataset file (.npz or .csv)"
+    )
 
 
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="results",
+        help=
+        "Output directory"
+    )
 
-    if not Path(DATASET_PATH).exists():
 
-        raise FileNotFoundError(
-            f"Dataset not found: {DATASET_PATH}"
-        )
+    args = parser.parse_args()
 
 
 
     results = run_training(
-        DATASET_PATH,
-        CLASS_NAMES
+        args.dataset,
+        CLASS_NAMES,
+        args.output
     )
 
 
