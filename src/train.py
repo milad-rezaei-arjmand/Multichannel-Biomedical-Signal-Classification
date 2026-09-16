@@ -139,7 +139,7 @@ def run_training(
         signals,
         fs=DEFAULT_FS
     )
-
+    
 
 
     # -----------------------
@@ -292,7 +292,7 @@ if __name__ == "__main__":
 
 
     DATASET_PATH = (
-         "data/dataset.csv"
+         "data/test_dataset.npz"
     )
 
 

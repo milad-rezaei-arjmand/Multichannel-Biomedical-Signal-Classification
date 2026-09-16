@@ -43,25 +43,14 @@ def build_feature_vector(
     Build complete feature vector
     from one multichannel signal.
 
-    Parameters
-    ----------
-    X : numpy.ndarray
-        Signal shape:
-        (time_samples, channels)
+    Expected shape:
 
-    Returns
-    -------
-    feature_vector : numpy.ndarray
-        Combined features.
-
-    feature_names : list
-        Feature names.
+    (time_samples, channels)
     """
+
 
     features = {}
 
-
-    # Time-domain features
 
     features.update(
         extract_multichannel_time_features(
@@ -69,8 +58,6 @@ def build_feature_vector(
         )
     )
 
-
-    # Frequency-domain features
 
     features.update(
         extract_multichannel_frequency_features(
@@ -80,8 +67,6 @@ def build_feature_vector(
     )
 
 
-    # Wavelet features
-
     features.update(
         extract_multichannel_wavelet_features(
             X,
@@ -90,8 +75,6 @@ def build_feature_vector(
         )
     )
 
-
-    # Cross-channel features
 
     features.update(
         extract_global_features(
@@ -128,18 +111,9 @@ def build_dataset_features(
     """
     Build feature matrix from dataset.
 
-    Parameters
-    ----------
-    signals : list or ndarray
-        Multiple multichannel signals.
+    Expected input:
 
-    Returns
-    -------
-    X_features : numpy.ndarray
-        Feature matrix.
-
-    feature_names : list
-        Feature names.
+    (samples, time_samples, channels)
     """
 
 
@@ -148,7 +122,9 @@ def build_dataset_features(
     feature_names = None
 
 
-    for signal_sample in signals:
+
+    for index, signal_sample in enumerate(signals):
+
 
 
         vector, names = build_feature_vector(

@@ -219,6 +219,8 @@ def predict_ensemble(
 ):
     """
     Generate ensemble prediction.
+
+    Returns original class labels.
     """
 
 
@@ -230,10 +232,18 @@ def predict_ensemble(
     )
 
 
-    prediction = np.argmax(
+    prediction_index = np.argmax(
         probability,
         axis=1
     )
+
+
+    # Convert class index back to original labels
+    classes = models[0].classes_
+
+    prediction = classes[
+        prediction_index
+    ]
 
 
     if return_probability:
@@ -242,7 +252,6 @@ def predict_ensemble(
 
 
     return prediction
-
 
 
 def save_models(

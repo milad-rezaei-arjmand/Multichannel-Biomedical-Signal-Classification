@@ -205,21 +205,13 @@ def preprocess_multichannel_signal(
     filter_order=4
 ):
     """
-    Apply preprocessing pipeline
-    to multichannel biomedical signals.
+    Preprocess one multichannel signal.
 
-    Parameters
-    ----------
-    signals : numpy.ndarray
-        Multichannel signals.
+    Input:
+        (time_samples, channels)
 
-    fs : float
-        Sampling frequency.
-
-    Returns
-    -------
-    numpy.ndarray
-        Preprocessed multichannel signals.
+    Output:
+        (time_samples, channels)
     """
 
 
@@ -229,67 +221,45 @@ def preprocess_multichannel_signal(
     )
 
 
-    processed = []
-
-
-    for channel in signals.T:
-
-        processed.append(
-            preprocess_channel(
-                channel,
-                fs,
-                low_freq,
-                high_freq,
-                filter_order
-            )
-        )
-def preprocess_dataset(
-    signals,
-    fs=DEFAULT_FS,
-    low_freq=5.0,
-    high_freq=3500.0,
-    filter_order=4
-):
-    """
-    Preprocess complete dataset.
-
-    Expected input:
-
-    (samples, time_points, channels)
-
-    Example:
-
-    (1000, 20000, 4)
-    """
-
-    signals = np.asarray(
-        signals,
-        dtype=np.float32
-    )
-
-
-    if signals.ndim != 3:
+    if signals.ndim != 2:
 
         raise ValueError(
-            "Dataset must have shape "
-            "(samples, time_points, channels)"
+            "Single signal must have shape "
+            "(time_samples, channels)"
         )
 
 
-    processed = []
+    processed_channels = []
 
 
-    for sample in signals:
+    # Process each channel separately
 
-        processed.append(
-            preprocess_multichannel_signal(
-                sample,
-                fs,
-                low_freq,
-                high_freq,
-                filter_order
-            )
+    for ch in range(signals.shape[1]):
+
+        channel = signals[:, ch]
+
+
+        channel = preprocess_channel(
+            channel,
+            fs,
+            low_freq,
+            high_freq,
+            filter_order
         )
+
+
+        processed_channels.append(
+            channel
+        )
+
+
+    # Back to:
+    # (time_samples, channels)
+
+    return np.stack(
+        processed_channels,
+        axis=1
+    )
 def preprocess_dataset(
     signals,
     fs=DEFAULT_FS,
@@ -334,13 +304,3 @@ def preprocess_dataset(
         processed,
         dtype=np.float32
     )
-
-    return np.asarray(
-        processed,
-        dtype=np.float32
-    )
-
-    return np.asarray(
-        processed,
-        dtype=np.float32
-    ).T
