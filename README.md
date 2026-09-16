@@ -4,7 +4,7 @@
 
 This repository presents an end-to-end machine learning framework for multichannel biomedical signal classification using signal preprocessing, multi-domain handcrafted feature extraction, feature selection, and CatBoost ensemble learning.
 
-The framework is designed for four-channel biomedical signals and combines temporal, spectral, wavelet, and cross-channel information to build a complete classification pipeline.
+The framework processes four-channel biomedical signals and combines temporal, spectral, wavelet, and cross-channel information to build a complete classification pipeline.
 
 ---
 
@@ -39,7 +39,7 @@ The framework supports:
 - `.npz`
 - `.csv`
 
-### NPZ format
+### NPZ Format
 
 The dataset should contain:
 
@@ -61,7 +61,7 @@ signals.shape = (1000, 20000, 4)
 
 labels.shape = (1000,)
 
-The classification classes used in the experiments are:
+Classification classes:
 
 Class
 N
@@ -127,13 +127,13 @@ The framework extracts handcrafted features from multiple domains.
 
 Time-domain Features
 
-Includes:
+Extracted features include:
 
 Mean
 Standard deviation
 Variance
 RMS
-Range
+Signal range
 Skewness
 Kurtosis
 Percentile statistics
@@ -144,7 +144,7 @@ Implementation:
 src/feature_extraction/time_features.py
 Frequency-domain Features
 
-Includes:
+Frequency analysis includes:
 
 FFT-based spectral features
 Dominant frequency
@@ -157,7 +157,7 @@ Implementation:
 src/feature_extraction/frequency_features.py
 Wavelet Features
 
-Includes:
+Wavelet-based analysis includes:
 
 Discrete wavelet decomposition
 Wavelet coefficient statistics
@@ -166,12 +166,12 @@ Multi-resolution analysis
 Implementation:
 
 src/feature_extraction/wavelet_features.py
-Cross-channel Features
+Global Cross-channel Features
 
-Includes:
+Cross-channel features include:
 
 Channel correlation
-Global statistics
+Global signal statistics
 Channel difference features
 
 Implementation:
@@ -184,7 +184,7 @@ Feature selection is performed using:
 SelectKBest
 ANOVA F-test
 
-The selected feature representation is used for classification.
+The selected feature representation is used for model training.
 
 Implementation:
 
@@ -192,9 +192,9 @@ src/train.py
 Classification Model
 CatBoost Ensemble
 
-The main classifier is based on CatBoost gradient boosting.
+The main classification model is based on CatBoost gradient boosting.
 
-The ensemble uses:
+The ensemble approach uses:
 
 Multiple CatBoost classifiers
 Different random seeds
@@ -214,13 +214,13 @@ Run training:
 
 python3 src/train.py --dataset path/to/dataset.npz
 
-Training workflow:
+Training pipeline:
 
 Dataset Loading
 
 ↓
 
-Preprocessing
+Signal Preprocessing
 
 ↓
 
@@ -256,7 +256,7 @@ These files are ignored from version control.
 
 Prediction / Inference
 
-After training:
+After training, prediction can be performed using:
 
 python3 src/predict.py --input signal.npy
 
