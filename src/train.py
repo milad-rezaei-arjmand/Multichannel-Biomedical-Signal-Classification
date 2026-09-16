@@ -31,7 +31,7 @@ from src.data_loader import load_dataset
 
 
 from src.preprocessing.signal_processing import (
-    preprocess_multichannel_signal
+    preprocess_dataset
 )
 
 
@@ -135,7 +135,7 @@ def run_training(
     )
 
 
-    signals = preprocess_multichannel_signal(
+    signals = preprocess_dataset(
         signals,
         fs=DEFAULT_FS
     )
@@ -292,7 +292,7 @@ if __name__ == "__main__":
 
 
     DATASET_PATH = (
-        "data/sample_dataset.csv"
+         "data/dataset.csv"
     )
 
 
