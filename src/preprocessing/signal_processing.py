@@ -1,306 +1,178 @@
 """
-Signal preprocessing utilities for
-Multichannel Biomedical Signal Classification.
+Signal preprocessing utilities.
 
 Includes:
 - NaN/Inf handling
-- Bandpass filtering
-- Channel normalization
-- Multichannel preprocessing
-
-Designed for multichannel biomedical signal classification pipeline.
+- Butterworth band-pass filtering
+- Per-channel Z-score normalization
+- Multichannel and dataset-level preprocessing
 """
 
+from __future__ import annotations
 
 import numpy as np
 from scipy import signal
 
-
-
-DEFAULT_FS = 1000
-
+from src.config import (
+    DEFAULT_FS,
+    FILTER_ORDER,
+    HIGH_FREQ,
+    LOW_FREQ,
+)
 
 
 def clean_signal(x):
-    """
-    Replace invalid values in signal.
+    """Replace NaN and infinite values with finite zeros."""
 
-    Parameters
-    ----------
-    x : numpy.ndarray
-        Input signal.
+    x = np.asarray(x, dtype=np.float32)
 
-    Returns
-    -------
-    numpy.ndarray
-        Cleaned signal.
-    """
-
-    x = np.asarray(
-        x,
-        dtype=np.float32
-    )
-
-
-    x = np.nan_to_num(
+    return np.nan_to_num(
         x,
         nan=0.0,
         posinf=0.0,
-        neginf=0.0
-    )
-
-
-    return x.astype(
-        np.float32
-    )
-
+        neginf=0.0,
+    ).astype(np.float32)
 
 
 def butter_bandpass(
     x,
-    fs,
-    lo,
-    hi,
-    order=4
+    fs=DEFAULT_FS,
+    lo=LOW_FREQ,
+    hi=HIGH_FREQ,
+    order=FILTER_ORDER,
 ):
-    """
-    Apply Butterworth bandpass filter.
-
-    Parameters
-    ----------
-    x : numpy.ndarray
-        Input signal.
-
-    fs : float
-        Sampling frequency.
-
-    lo : float
-        Lower cutoff frequency.
-
-    hi : float
-        Upper cutoff frequency.
-
-    order : int
-        Filter order.
-
-    Returns
-    -------
-    numpy.ndarray
-        Filtered signal.
-    """
+    """Apply a Butterworth band-pass filter."""
 
     x = clean_signal(x)
 
+    fs = float(fs)
+    lo = float(lo)
+    hi = float(hi)
 
-    nyq = 0.5 * fs
+    if fs <= 0:
+        raise ValueError("Sampling frequency must be positive.")
 
+    nyquist = fs / 2.0
 
-    low = max(
-        lo / nyq,
-        1e-6
+    if not (0.0 < lo < hi < nyquist):
+        raise ValueError(
+            "Band-pass cutoffs must satisfy "
+            f"0 < low < high < Nyquist. "
+            f"Received low={lo}, high={hi}, fs={fs}."
+        )
+
+    sos = signal.butter(
+        int(order),
+        [lo, hi],
+        btype="bandpass",
+        fs=fs,
+        output="sos",
     )
 
-    high = min(
-        hi / nyq,
-        0.999999
-    )
+    try:
+        filtered = signal.sosfiltfilt(sos, x)
+    except ValueError:
+        # Very short signals may not satisfy zero-phase padding requirements.
+        filtered = signal.sosfilt(sos, x)
 
-
-    b, a = signal.butter(
-        order,
-        [low, high],
-        btype="bandpass"
-    )
-
-
-    filtered = signal.filtfilt(
-        b,
-        a,
-        x
-    )
-
-
-    return filtered.astype(
-        np.float32
-    )
-
+    return np.asarray(filtered, dtype=np.float32)
 
 
 def normalize_signal(x):
-    """
-    Apply Z-score normalization.
-
-    Parameters
-    ----------
-    x : numpy.ndarray
-        Input signal.
-
-    Returns
-    -------
-    numpy.ndarray
-        Normalized signal.
-    """
+    """Apply per-channel Z-score normalization."""
 
     x = clean_signal(x)
 
+    mean = float(np.mean(x))
+    std = float(np.std(x))
 
-    mean = np.mean(x)
+    if std <= 1e-6:
+        return np.zeros_like(x, dtype=np.float32)
 
-    std = np.std(x) + 1e-6
-
-
-    x = (
-        x - mean
-    ) / std
-
-
-    return x.astype(
-        np.float32
-    )
-
+    return ((x - mean) / std).astype(np.float32)
 
 
 def preprocess_channel(
     x,
     fs=DEFAULT_FS,
-    low_freq=5.0,
-    high_freq=3500.0,
-    filter_order=4
+    low_freq=LOW_FREQ,
+    high_freq=HIGH_FREQ,
+    filter_order=FILTER_ORDER,
 ):
-    """
-    Complete preprocessing pipeline for one signal channel.
-
-    Steps:
-    1. Remove invalid values
-    2. Bandpass filtering
-    3. Z-score normalization
-    """
+    """Clean, band-pass filter, and normalize one channel."""
 
     x = clean_signal(x)
 
-
     x = butter_bandpass(
         x,
-        fs,
-        low_freq,
-        high_freq,
-        filter_order
+        fs=fs,
+        lo=low_freq,
+        hi=high_freq,
+        order=filter_order,
     )
 
-
-    x = normalize_signal(
-        x
-    )
-
-
-    return x
-
+    return normalize_signal(x)
 
 
 def preprocess_multichannel_signal(
     signals,
     fs=DEFAULT_FS,
-    low_freq=5.0,
-    high_freq=3500.0,
-    filter_order=4
+    low_freq=LOW_FREQ,
+    high_freq=HIGH_FREQ,
+    filter_order=FILTER_ORDER,
 ):
     """
-    Preprocess one multichannel signal.
-
-    Input:
-        (time_samples, channels)
-
-    Output:
-        (time_samples, channels)
+    Preprocess one signal with shape (time_points, channels).
     """
 
-
-    signals = np.asarray(
-        signals,
-        dtype=np.float32
-    )
-
+    signals = np.asarray(signals, dtype=np.float32)
 
     if signals.ndim != 2:
-
         raise ValueError(
-            "Single signal must have shape "
-            "(time_samples, channels)"
+            "Single signal must have shape (time_points, channels)."
         )
 
-
-    processed_channels = []
-
-
-    # Process each channel separately
-
-    for ch in range(signals.shape[1]):
-
-        channel = signals[:, ch]
-
-
-        channel = preprocess_channel(
-            channel,
-            fs,
-            low_freq,
-            high_freq,
-            filter_order
+    processed_channels = [
+        preprocess_channel(
+            signals[:, channel_index],
+            fs=fs,
+            low_freq=low_freq,
+            high_freq=high_freq,
+            filter_order=filter_order,
         )
+        for channel_index in range(signals.shape[1])
+    ]
+
+    return np.stack(processed_channels, axis=1)
 
 
-        processed_channels.append(
-            channel
-        )
-
-
-    # Back to:
-    # (time_samples, channels)
-
-    return np.stack(
-        processed_channels,
-        axis=1
-    )
 def preprocess_dataset(
     signals,
     fs=DEFAULT_FS,
-    low_freq=5.0,
-    high_freq=3500.0,
-    filter_order=4
+    low_freq=LOW_FREQ,
+    high_freq=HIGH_FREQ,
+    filter_order=FILTER_ORDER,
 ):
     """
-    Preprocess complete dataset.
-
-    Expected input:
-
-    (samples, time_points, channels)
+    Preprocess a dataset with shape (samples, time_points, channels).
     """
 
-    signals = np.asarray(
-        signals,
-        dtype=np.float32
-    )
+    signals = np.asarray(signals, dtype=np.float32)
 
     if signals.ndim != 3:
         raise ValueError(
-            "Dataset must have shape "
-            "(samples, time_points, channels)"
+            "Dataset must have shape (samples, time_points, channels)."
         )
 
-    processed = []
-
-    for sample in signals:
-
-        processed.append(
-            preprocess_multichannel_signal(
-                sample,
-                fs,
-                low_freq,
-                high_freq,
-                filter_order
-            )
+    processed = [
+        preprocess_multichannel_signal(
+            sample,
+            fs=fs,
+            low_freq=low_freq,
+            high_freq=high_freq,
+            filter_order=filter_order,
         )
+        for sample in signals
+    ]
 
-    return np.asarray(
-        processed,
-        dtype=np.float32
-    )
+    return np.asarray(processed, dtype=np.float32)

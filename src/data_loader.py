@@ -1,200 +1,102 @@
 """
-Dataset loading utilities for
-Multichannel Biomedical Signal Classification.
+Dataset loading utilities for Multichannel Biomedical Signal Classification.
 
-Supported formats:
-- NPZ (recommended)
-- CSV (basic support)
+The public pipeline uses NPZ as its supported training-data format.
+
+Required arrays
+---------------
+signals : (samples, time_points, 4)
+labels  : (samples,)
+
+Optional array
+--------------
+groups  : (samples,)
+    Participant/recording group identifiers. When present, the training
+    pipeline uses group-disjoint train/validation/test splitting.
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
+from src.config import N_CHANNELS
 
 
 def load_npz_dataset(file_path):
-    """
-    Load biomedical signal dataset
-    from NPZ format.
+    """Load and validate a multichannel biomedical signal dataset."""
 
-    Expected structure:
-
-    signals:
-        (samples, time_points, channels)
-
-    labels:
-        (samples,)
-    """
-
-    data = np.load(
-        file_path,
-        allow_pickle=True
-    )
-
-
-    if "signals" not in data or "labels" not in data:
-
-        raise ValueError(
-            "NPZ file must contain 'signals' and 'labels'."
-        )
-
-
-    signals = data["signals"]
-
-    labels = data["labels"]
-
-
-    signals = np.asarray(
-        signals,
-        dtype=np.float32
-    )
-
-
-    labels = np.asarray(
-        labels
-    )
-
-
-    if signals.ndim != 3:
-
-        raise ValueError(
-            "Signals must have shape "
-            "(samples, time_points, channels)."
-        )
-
-
-    if len(signals) != len(labels):
-
-        raise ValueError(
-            "Number of signals and labels must match."
-        )
-
-
-    return signals, labels
-
-
-
-def load_csv_dataset(file_path):
-    """
-    Load dataset from CSV format.
-
-    Expected columns:
-
-    Amplitude
-    Velocity
-    Acceleration
-    Alpha
-    label
-    """
-
-    data = pd.read_csv(
-        file_path
-    )
-
-
-    if "label" not in data.columns:
-
-        raise ValueError(
-            "CSV dataset must contain 'label' column."
-        )
-
-
-    labels = data["label"].values
-
-
-    signals = data.drop(
-        columns=["label"]
-    ).values
-
-
-    signals = signals.astype(
-        np.float32
-    )
-
-
-    return signals, labels
-
-
-
-def validate_dataset(
-    signals,
-    labels
-):
-    """
-    Validate loaded dataset.
-    """
-
-    if len(signals) != len(labels):
-
-        raise ValueError(
-            "Signals and labels size mismatch."
-        )
-
-
-    print(
-        "Signals shape:",
-        signals.shape
-    )
-
-    print(
-        "Labels shape:",
-        labels.shape
-    )
-
-
-
-def load_dataset(
-    data_path
-):
-    """
-    General dataset loader.
-
-    Supports:
-
-    .npz
-    .csv
-    """
-
-    path = Path(
-        data_path
-    )
-
+    path = Path(file_path)
 
     if not path.exists():
+        raise FileNotFoundError(f"Dataset file not found: {path}")
 
-        raise FileNotFoundError(
-            f"Dataset file not found: {path}"
-        )
-
-
-    if path.suffix.lower() == ".npz":
-
-        signals, labels = load_npz_dataset(
-            path
-        )
-
-
-    elif path.suffix.lower() == ".csv":
-
-        signals, labels = load_csv_dataset(
-            path
-        )
-
-
-    else:
-
+    if path.suffix.lower() != ".npz":
         raise ValueError(
-            "Unsupported dataset format. "
-            "Use .npz or .csv"
+            "Unsupported dataset format. The public pipeline supports .npz only."
         )
 
+    data = np.load(path, allow_pickle=True)
 
-    validate_dataset(
-        signals,
-        labels
-    )
+    if "signals" not in data or "labels" not in data:
+        raise ValueError(
+            "NPZ file must contain 'signals' and 'labels' arrays."
+        )
+
+    signals = np.asarray(data["signals"], dtype=np.float32)
+    labels = np.asarray(data["labels"])
+
+    if signals.ndim != 3:
+        raise ValueError(
+            "Signals must have shape (samples, time_points, channels)."
+        )
+
+    if signals.shape[2] != N_CHANNELS:
+        raise ValueError(
+            f"Expected exactly {N_CHANNELS} channels; "
+            f"found {signals.shape[2]}."
+        )
+
+    if labels.ndim != 1:
+        labels = labels.reshape(-1)
+
+    if len(signals) != len(labels):
+        raise ValueError(
+            "Number of signal samples and labels must match."
+        )
+
+    if len(signals) == 0:
+        raise ValueError("Dataset is empty.")
+
+    groups = None
+
+    if "groups" in data:
+        groups = np.asarray(data["groups"])
+
+        if groups.ndim != 1:
+            groups = groups.reshape(-1)
+
+        if len(groups) != len(labels):
+            raise ValueError(
+                "Optional 'groups' array must have one value per sample."
+            )
+
+    return signals, labels, groups
 
 
-    return signals, labels
+def load_dataset(data_path):
+    """General dataset loader for the supported NPZ format."""
+
+    signals, labels, groups = load_npz_dataset(data_path)
+
+    print("Signals shape:", signals.shape)
+    print("Labels shape:", labels.shape)
+
+    if groups is not None:
+        print("Groups shape:", groups.shape)
+        print("Unique groups:", len(np.unique(groups)))
+    else:
+        print("Groups: not provided (sample-level split will be used)")
+
+    return signals, labels, groups

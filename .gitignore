@@ -1,21 +1,26 @@
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
 # Virtual environments
+.venv/
 venv/
 env/
-.venv/
 
 # Jupyter
 .ipynb_checkpoints/
 
-# Dataset files
+# Local/restricted datasets
 data/*
 !data/README.md
 
-# Trained models
+# Generated training artifacts
+outputs/
+checkpoints/
+catboost_info/
+
+# Model files
 *.cbm
 *.pkl
 *.joblib
@@ -23,13 +28,9 @@ data/*
 *.pt
 *.pth
 
-# Experiment outputs
-results/*
-!results/README.md
-!results/final_metrics.md
-
-# Logs
+# Logs and temporary files
 *.log
+*.tmp
 
 # OS files
 .DS_Store
@@ -38,7 +39,3 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
-# CatBoost logs
-catboost_info/
-# Local test datasets
-data/*.npz

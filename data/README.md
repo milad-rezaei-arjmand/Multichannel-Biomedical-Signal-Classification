@@ -1,221 +1,118 @@
 # Dataset
 
-## Overview
+## Availability
 
-The original biomedical signal dataset is not included in this
-repository due to data usage restrictions and privacy considerations.
+The original dataset used for the archived experiment is not distributed in this repository.
 
-This repository provides the complete machine learning pipeline,
-including:
+The public training pipeline expects users to provide a legally available, compatible four-channel biomedical signal dataset.
 
--   Signal preprocessing
--   Multi-domain feature extraction
--   Feature selection
--   CatBoost ensemble classification
--   Model evaluation
+---
 
-Users can apply the pipeline by providing their own compatible
-multichannel biomedical signal dataset.
+## Supported Public Input Format
 
-------------------------------------------------------------------------
+The cleaned public pipeline supports **NPZ** training datasets.
 
-## Dataset Structure
+Required arrays:
 
-The framework is designed for multichannel biomedical signals.
-
-Expected input format:
-
-``` text
-(samples, time_points, channels)
-```
-
-Example:
-
-``` text
-(1000, 20000, 4)
-```
-
-where:
-
--   `samples` = number of signal samples
--   `time_points` = number of temporal points per signal
--   `channels` = number of synchronized signal channels
-
-------------------------------------------------------------------------
-
-## Signal Channels
-
-The model expects four input channels:
-
-  Channel     Description
-  ----------- --------------
-  Channel 1   Amplitude
-  Channel 2   Velocity
-  Channel 3   Acceleration
-  Channel 4   Alpha
-
-------------------------------------------------------------------------
-
-## Labels
-
-The classification task contains five target classes:
-
-  Label   Description
-  ------- -----------------------
-  N       Normal
-  MVP     Mitral Valve Prolapse
-  MS      Mitral Stenosis
-  MR      Mitral Regurgitation
-  AS      Aortic Stenosis
-
-The label array format:
-
-``` text
-(samples,)
-```
-
-Example:
-
-``` text
-[
-N,
-MVP,
-MS,
-MR,
-AS
-]
-```
-
-------------------------------------------------------------------------
-
-## Dataset Preparation
-
-Place your dataset inside:
-
-``` text
-data/
-```
-
-Example:
-
-``` text
-data/
-├── dataset.csv
-└── README.md
-```
-
-Update the dataset path in:
-
-``` text
-src/train.py
-```
-
-Example:
-
-``` python
-DATASET_PATH = "data/dataset.csv"
-```
-
-------------------------------------------------------------------------
-
-## CSV Input Format
-
-For CSV-based datasets, the expected columns are:
-
-``` text
-Amplitude,Velocity,Acceleration,Alpha,label
-```
-
-Example:
-
-``` text
-Amplitude,Velocity,Acceleration,Alpha,label
-0.12,0.31,0.21,0.45,N
-0.15,0.28,0.19,0.41,MVP
-0.10,0.35,0.25,0.50,MS
-```
-
-------------------------------------------------------------------------
-
-## Recommended Data Format
-
-For large biomedical signal datasets, a structured NumPy format is
-recommended:
-
-``` text
-dataset.npz
-```
-
-containing:
-
-``` python
+```text
 signals
 labels
 ```
 
+Optional array:
+
+```text
+groups
+```
+
 Expected shapes:
 
-``` text
-signals.shape = (samples, time_points, channels)
-
-labels.shape = (samples,)
+```text
+signals.shape = (samples, time_points, 4)
+labels.shape  = (samples,)
+groups.shape  = (samples,)   # optional
 ```
 
-Example:
+`groups` may contain participant IDs, recording IDs, or another grouping variable. When it is provided, the training pipeline keeps groups disjoint across train, validation, and test splits.
 
-``` text
-signals.shape
+When `groups` is absent, the pipeline uses sample-level stratified splitting.
 
-(1000, 20000, 4)
+---
 
+## Four Signal Channels
 
-labels.shape
+The project uses four synchronized channels with the following names:
 
-(1000,)
+| Channel | Project label |
+|---|---|
+| 1 | Amplitude |
+| 2 | Velocity |
+| 3 | Acceleration |
+| 4 | Alpha |
+
+The current public pipeline assumes that all samples use the same channel ordering.
+
+---
+
+## Classification Labels
+
+The configured five-class task is:
+
+| Label | Description |
+|---|---|
+| N | Normal |
+| MVP | Mitral Valve Prolapse |
+| MS | Mitral Stenosis |
+| MR | Mitral Regurgitation |
+| AS | Aortic Stenosis |
+
+All five configured labels must be present for the standard training pipeline.
+
+---
+
+## Example NPZ Creation
+
+```python
+import numpy as np
+
+np.savez(
+    "data/dataset.npz",
+    signals=signals,  # (samples, time_points, 4)
+    labels=labels,    # (samples,)
+    groups=groups,    # optional
+)
 ```
 
-------------------------------------------------------------------------
+The training dataset itself should not be committed to the repository.
 
-## Training Pipeline
+---
 
-After preparing the dataset:
+## Training
 
-``` bash
-python3 src/train.py
+From the repository root:
+
+```bash
+python src/train.py --dataset data/dataset.npz
 ```
 
-The pipeline performs:
+For CatBoost GPU execution:
 
-``` text
-Multichannel Biomedical Signal
-
-        ↓
-
-Signal Preprocessing
-
-        ↓
-
-Feature Extraction
-
-        ↓
-
-Feature Selection
-
-        ↓
-
-CatBoost Ensemble Classification
-
-        ↓
-
-Performance Evaluation
+```bash
+python src/train.py \
+  --dataset data/dataset.npz \
+  --task-type GPU
 ```
 
-------------------------------------------------------------------------
+Generated models and evaluation files are written under `outputs/` by default.
 
-## Dataset Availability
+---
 
-The complete dataset used for experiments is not distributed with this
-repository.
+## Why CSV Support Was Removed
 
-Users should provide their own dataset following the required structure
-before running experiments.
+An earlier repository version advertised a simple row-wise CSV format. That loader produced a 2-D array, while the preprocessing and feature-extraction pipeline requires a 3-D dataset shaped as:
+
+```text
+(samples, time_points, channels)
+```
+
+Because the old CSV convention did not encode sample boundaries or time-series structure, it was not a valid end-to-end input format. The public workflow therefore now documents and supports NPZ only.

@@ -1,6 +1,5 @@
 numpy
-pandas
 scikit-learn
 scipy
-pywavelets
+PyWavelets
 catboost

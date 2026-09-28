@@ -1,155 +1,112 @@
 """
-Feature building pipeline for multichannel biomedical signals.
+Feature-building pipeline for multichannel biomedical signals.
 
 Combines:
 - Time-domain features
 - Frequency-domain features
 - Wavelet features
-- Global cross-channel features
+- Global/cross-channel features
 """
+
+from __future__ import annotations
 
 import numpy as np
 
+from src.config import DEFAULT_FS
 
-from .time_features import (
-    extract_multichannel_time_features
-)
-
-from .frequency_features import (
-    extract_multichannel_frequency_features
-)
-
-from .wavelet_features import (
-    extract_multichannel_wavelet_features
-)
-
-from .global_features import (
-    extract_global_features
-)
-
-
-
-DEFAULT_FS = 8000
-
+from .frequency_features import extract_multichannel_frequency_features
+from .global_features import extract_global_features
+from .time_features import extract_multichannel_time_features
+from .wavelet_features import extract_multichannel_wavelet_features
 
 
 def build_feature_vector(
     X,
     fs=DEFAULT_FS,
     wavelet="db4",
-    level=4
+    level=4,
 ):
-    """
-    Build complete feature vector
-    from one multichannel signal.
+    """Build a deterministic feature vector for one multichannel signal."""
 
-    Expected shape:
+    X = np.asarray(X, dtype=np.float32)
 
-    (time_samples, channels)
-    """
+    if X.ndim != 2:
+        raise ValueError(
+            "Input signal must have shape (time_points, channels)."
+        )
 
+    if X.shape[0] == 0 or X.shape[1] == 0:
+        raise ValueError("Input signal cannot be empty.")
 
     features = {}
 
-
     features.update(
-        extract_multichannel_time_features(
-            X
-        )
+        extract_multichannel_time_features(X)
     )
-
-
     features.update(
-        extract_multichannel_frequency_features(
-            X,
-            fs
-        )
+        extract_multichannel_frequency_features(X, fs)
     )
-
-
     features.update(
         extract_multichannel_wavelet_features(
             X,
-            wavelet,
-            level
+            wavelet=wavelet,
+            level=level,
         )
     )
-
-
     features.update(
-        extract_global_features(
-            X
+        extract_global_features(X)
+    )
+
+    feature_names = sorted(features.keys())
+
+    feature_vector = np.asarray(
+        [features[name] for name in feature_names],
+        dtype=np.float32,
+    )
+
+    if not np.all(np.isfinite(feature_vector)):
+        raise ValueError(
+            "Extracted feature vector contains NaN or infinite values."
         )
-    )
 
-
-    feature_names = sorted(
-        features.keys()
-    )
-
-
-    feature_vector = np.array(
-        [
-            features[name]
-            for name in feature_names
-        ],
-        dtype=np.float32
-    )
-
-
-    return (
-        feature_vector,
-        feature_names
-    )
-
+    return feature_vector, feature_names
 
 
 def build_dataset_features(
     signals,
-    fs=DEFAULT_FS
+    fs=DEFAULT_FS,
 ):
-    """
-    Build feature matrix from dataset.
+    """Build a feature matrix from a 3-D signal dataset."""
 
-    Expected input:
+    signals = np.asarray(signals, dtype=np.float32)
 
-    (samples, time_samples, channels)
-    """
+    if signals.ndim != 3:
+        raise ValueError(
+            "Dataset must have shape (samples, time_points, channels)."
+        )
 
+    if len(signals) == 0:
+        raise ValueError("Dataset is empty.")
 
     all_features = []
-
-    feature_names = None
-
-
+    reference_feature_names = None
 
     for index, signal_sample in enumerate(signals):
-
-
-
         vector, names = build_feature_vector(
             signal_sample,
-            fs
+            fs=fs,
         )
 
+        if reference_feature_names is None:
+            reference_feature_names = names
+        elif names != reference_feature_names:
+            raise RuntimeError(
+                "Feature schema changed between samples at "
+                f"sample index {index}."
+            )
 
-        all_features.append(
-            vector
-        )
+        all_features.append(vector)
 
+    X_features = np.vstack(all_features).astype(np.float32)
 
-        if feature_names is None:
-
-            feature_names = names
-
-
-
-    X_features = np.vstack(
-        all_features
-    )
-
-
-    return (
-        X_features,
-        feature_names
-    )
+    return X_features, reference_feature_names

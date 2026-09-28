@@ -1,27 +1,28 @@
 """
-Global configuration for
-Multichannel Biomedical Signal Classification.
+Central configuration for Multichannel Biomedical Signal Classification.
 """
-
-
-# Sampling frequency
 
 DEFAULT_FS = 8000
 
+N_CHANNELS = 4
 
-
-# Classification labels
+CHANNEL_NAMES = [
+    "Amplitude",
+    "Velocity",
+    "Acceleration",
+    "Alpha",
+]
 
 CLASS_NAMES = [
     "N",
     "MVP",
     "MS",
     "MR",
-    "AS"
+    "AS",
 ]
 
-
-
-# Random seed
+LOW_FREQ = 5.0
+HIGH_FREQ = 3500.0
+FILTER_ORDER = 4
 
 RANDOM_STATE = 42
